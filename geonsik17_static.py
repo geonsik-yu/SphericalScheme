@@ -149,19 +149,23 @@ def main(argv=None):
 				f.write(repr(a[i])+","+repr(b[i])+","+repr(c[i])+","+repr(d[i])+'\n');
 			f.close()
 
-	if False:
-		for strategy in ['r', 'd1', 'd2', 'f1', 'f2']:
-			for upper in ['50%', '60%', '70%', '80%', '90%']:
-				f = open('./geonsik_result_strategy_'+strategy+'_UboundFit'+repr(upper)+'.txt', 'w')
-				result = spherical_strategy.simulator_strategy2suitability(strategy, polar_lower_str = upper)
-				a = result['fit'] 
-				b = result['div'] 
-				c = result['con']
-				for i in range(0, 500):
-					f.write(repr(a[i])+","+repr(b[i])+","+repr(c[i])+'\n');
-				f.close()
-
 	if True:
+	#	for strategy in ['r', 'd1', 'd2', 'f1', 'f2']:
+	#	for strategy in ['d1', 'f1']:
+		for strategy in ['f1']:
+			for tilt in [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2]:
+				for upper in ['50%', '52%', '54%', '56%', '58%', '60%', '62%', '64%', '66%', '68%', '70%']:
+				##for upper in ['50%', '60%', '70%', '80%', '90%']:
+					f = open('./geonsik_result_strategyTilt_'+repr(tilt)+'_'+strategy+'_UboundFit'+repr(upper)+'.txt', 'w')
+					result = spherical_strategy.simulator_strategy2suitability(strategy, polar_lower_str = upper, market=[tilt, 0.0])
+					a = result['fit'] 
+					b = result['div'] 
+					c = result['con']
+					for i in range(0, 200):
+						f.write(repr(a[i])+","+repr(b[i])+","+repr(c[i])+'\n');
+					f.close()
+
+	if False:
 		for strategy in ['r', 'd1', 'd2', 'f1', 'f2']:
 			for lower in ['0%', '10%', '20%', '30%', '40%']:
 				f = open('./geonsik_result_strategy_'+strategy+'_LboundFit'+repr(lower)+'.txt', 'w')

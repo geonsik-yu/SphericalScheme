@@ -21,9 +21,9 @@ Min_Performance = numpy.round( 10 - math.sqrt(40/3)*erfinv( math.cos(Angle_Lower
 Angle_Upper_Bound = numpy.arccos( erf( (Min_Performance - 10)/math.sqrt(40/3) ) )
 
 Approx_Angles_wPercentage = {}
-for percentage in range(0, 11):
-	x = numpy.arccos( erf(( percentage * 0.1 * ( Max_Performance - Min_Performance ) + Min_Performance -10 ) / math.sqrt(40/3)) )
-	Approx_Angles_wPercentage[repr(percentage*10)+'%'] = numpy.round( x, 10 )
+for percentage in range(0, 51):
+	x = numpy.arccos( erf(( percentage * 0.02 * ( Max_Performance - Min_Performance ) + Min_Performance -10 ) / math.sqrt(40/3)) )
+	Approx_Angles_wPercentage[repr(percentage*2)+'%'] = numpy.round( x, 10 )
 print Approx_Angles_wPercentage
 ## -------------------------------------------------------------------------------------------
 # | General performance function for normal distribution is as follows:
@@ -58,9 +58,13 @@ print Approx_Angles_wPercentage
 
 
 ## Math functions ----------------------------------------------------------------------------
-def normal_performance(opinion): 
+def normal_performance(opinion, market = [0,0]): 
 	# Assume market := [0, 0]
-	angle = opinion[0]
+	angle = None
+	if market == [0,0]:
+		angle = opinion[0]
+	else:
+		angle = angle_between(opinion, market)
 	return 10 + math.sqrt(40/3)*erfinv( math.cos(angle) )
 
 def upperDomeNormal_performance(opinion, alpha): 
