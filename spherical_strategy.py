@@ -34,7 +34,7 @@ print Approx_Angles_wPercentage
 # Static values (Hard-coded). ----------------------------------------------------------------
 Number_Of_Candidates = 50
 Org_Size = 10
-Instance_Count = 200
+Instance_Count = 100
 
 def candidateSelect(Stacked, Candidates, Flag, GuessMarket):
 	# March's normal distribution assumption.

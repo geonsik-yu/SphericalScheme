@@ -1,9 +1,7 @@
 import numpy
 import spherical
-import spherical_strategy
 import sys
 import getopt
-
 
 def main(argv=None):
 	if argv is None:
@@ -55,7 +53,7 @@ def main(argv=None):
 			c = result['dissimilarity']
 			d = result['contains']
 
-			for i in range(0, 200):
+			for i in range(0, 2000):
 				f.write(repr(a[i])+","+repr(b[i])+","+repr(c[i])+","+repr(d[i])+'\n');
 			f.close()
 	## --------------------------------------------------------------------------------------------
@@ -70,7 +68,7 @@ def main(argv=None):
 			c = result['dissimilarity']
 			d = result['contains']
 
-			for i in range(0, 200):
+			for i in range(0, 2000):
 				f.write(repr(a[i])+","+repr(b[i])+","+repr(c[i])+","+repr(d[i])+'\n');
 			f.close()
 
@@ -86,7 +84,7 @@ def main(argv=None):
 			c = result['dissimilarity']
 			d = result['contains']
 
-			for i in range(0, 200):
+			for i in range(0, 2000):
 				f.write(repr(a[i])+","+repr(b[i])+","+repr(c[i])+","+repr(d[i])+'\n');
 			f.close()
 
@@ -107,9 +105,29 @@ def main(argv=None):
 				c = result['dissimilarity']
 				d = result['contains']
 
-				for i in range(0, 200):
+				for i in range(0, 2000):
 					f.write(repr(a[i])+","+repr(b[i])+","+repr(c[i])+","+repr(d[i])+'\n');
 				f.close()
+
+
+	## --------------------------------------------------------------------------------------------
+	if True: ## Experiment 1: Random learning rate.
+		f = open('./geonsik_result_randomLearningRate.txt', 'w')
+		L = 1 # dummy value
+		result = spherical.simulator(10, 0.75, L, 0, \
+									 polar_lower_str = '60%', randomLearnFlag = True)
+
+		a = result['convergence'] 
+		b = result['elapsedTime'] 
+		c = result['dissimilarity']
+		d = result['contains']
+		e = result['learningRate']
+
+		for i in range(0, 2000):
+			f.write(repr(a[i])+","+repr(b[i])+","+repr(c[i])+","+repr(d[i])+","+repr(e[i])+'\n');
+		f.close()
+
+
 
 	## --------------------------------------------------------------------------------------------
 	if False: ## Experiment 2: Lower Dome Normal Model
@@ -126,7 +144,7 @@ def main(argv=None):
 			c = result['dissimilarity']
 			d = result['contains']
 
-			for i in range(0, 200):
+			for i in range(0, 2000):
 				f.write(repr(a[i])+","+repr(b[i])+","+repr(c[i])+","+repr(d[i])+'\n');
 			f.close()
 
@@ -148,34 +166,6 @@ def main(argv=None):
 			for i in range(0, 200):
 				f.write(repr(a[i])+","+repr(b[i])+","+repr(c[i])+","+repr(d[i])+'\n');
 			f.close()
-
-	if True:
-	#	for strategy in ['r', 'd1', 'd2', 'f1', 'f2']:
-	#	for strategy in ['d1', 'f1']:
-		for strategy in ['f1']:
-			for tilt in [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2]:
-				for upper in ['50%', '52%', '54%', '56%', '58%', '60%', '62%', '64%', '66%', '68%', '70%']:
-				##for upper in ['50%', '60%', '70%', '80%', '90%']:
-					f = open('./geonsik_result_strategyTilt_'+repr(tilt)+'_'+strategy+'_UboundFit'+repr(upper)+'.txt', 'w')
-					result = spherical_strategy.simulator_strategy2suitability(strategy, polar_lower_str = upper, market=[tilt, 0.0])
-					a = result['fit'] 
-					b = result['div'] 
-					c = result['con']
-					for i in range(0, 200):
-						f.write(repr(a[i])+","+repr(b[i])+","+repr(c[i])+'\n');
-					f.close()
-
-	if False:
-		for strategy in ['r', 'd1', 'd2', 'f1', 'f2']:
-			for lower in ['0%', '10%', '20%', '30%', '40%']:
-				f = open('./geonsik_result_strategy_'+strategy+'_LboundFit'+repr(lower)+'.txt', 'w')
-				result = spherical_strategy.simulator_strategy2suitability(strategy, polar_upper_str = lower)
-				a = result['fit'] 
-				b = result['div'] 
-				c = result['con']
-				for i in range(0, 500):
-					f.write(repr(a[i])+","+repr(b[i])+","+repr(c[i])+'\n');
-				f.close()
 
 
 	"""

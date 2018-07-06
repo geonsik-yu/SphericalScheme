@@ -1,0 +1,5 @@
+import numpy
+import spherical
+import spherical_strategy
+import sys
+import getopt

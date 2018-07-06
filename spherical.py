@@ -10,9 +10,10 @@ import numpy
 import random
 from scipy.special import erfinv
 from scipy.special import erf
+from scipy.optimize import fsolve
 
 # Static values (Hard-coded). ----------------------------------------------------------------
-Instance_Count = 200
+Instance_Count = 2000
 Angle_Lower_Bound = 0.01
 
 # Derived values -----------------------------------------------------------------------------
@@ -55,36 +56,16 @@ print Approx_Angles_wPercentage
 # |	 >>
 ## -------------------------------------------------------------------------------------------
 
-
-
 ## Math functions ----------------------------------------------------------------------------
-def normal_performance(opinion, market = [0,0]): 
-	# Assume market := [0, 0]
-	angle = None
-	if market == [0,0]:
-		angle = opinion[0]
-	else:
-		angle = angle_between(opinion, market)
-	return 10 + math.sqrt(40/3)*erfinv( math.cos(angle) )
-
-def upperDomeNormal_performance(opinion, alpha): 
-	# Assume market := [0, 0]
-	angle = opinion[0]
-	if angle > numpy.arccos(2*alpha-1):
-		return Min_Performance
-	return 10 + math.sqrt(40/3)*erfinv( (math.cos(angle)-alpha)/(1-alpha) )
-
-def lowerDomeNormal_performance(opinion, alpha): 
-	# Assume market := [0, 0]
-	angle = opinion[0]
-	if angle < numpy.arccos(2*alpha-1):
-		return Max_Performance		
-	return 10 + math.sqrt(40/3)*erfinv( (math.cos(angle)-alpha+1)/(alpha) )
-
-
+## 1. Geometric functions --------------------------------------------------------------------
 def spherical2cartesian(a):
-	## Input: a spherical coordinates with unit length. [theta, phi]
+	## Input: a 3D point with unit length in spherical coordinate system: [theta, phi].
 	return [numpy.sin(a[0])*numpy.cos(a[1]), numpy.sin(a[0])*numpy.sin(a[1]), numpy.cos(a[0])]
+
+def cartesian2spherical(a):
+	## Input: a 3D point with unit length in cartesian coordinate system: [x, y, z].
+	magnitude = math.sqrt( a[0]**2 + a[1]**2 + a[2]**2 )
+	return [numpy.arccos(a[2]/magnitude), numpy.arctan2(a[1], a[0])]
 
 def arc_midpoint(a, b):
 	## Input: two spherical coordinates with unit length.
@@ -92,16 +73,41 @@ def arc_midpoint(a, b):
 	cartesian_b = spherical2cartesian(b)
 	lin_mpt = [ (cartesian_a[0] + cartesian_b[0])/2, \
 				(cartesian_a[1] + cartesian_b[1])/2, \
-				(cartesian_a[2] + cartesian_b[2])/2]
+				(cartesian_a[2] + cartesian_b[2])/2] # linear midpoint
+	return cartesian2spherical(lin_mpt)
 
-	magnitude = numpy.sqrt(lin_mpt[0]**2 + lin_mpt[1]**2 + lin_mpt[2]**2)
-	mid_theta = numpy.arccos(lin_mpt[2]/magnitude)
-	mid_phi = numpy.arctan2(lin_mpt[1], lin_mpt[0]) ## [Important Note] Use arctan2!!
-	return [mid_theta, mid_phi]
+def equations(p, args):
+	x, y, z = p
+	angle = args[0]
+	param = args[1]
+	opinion_a = args[2]
+	opinion_b = args[3]
+
+	value_1 = numpy.cos(param * angle_between(opinion_a, opinion_b))
+	value_2 = numpy.cos((1-param) * angle_between(opinion_a, opinion_b))
+	point_1c = spherical2cartesian(opinion_a)
+	point_2c = spherical2cartesian(opinion_b)
+
+	return (x**2+y**2+z**2-1
+		  , point_1c[0]*x+point_1c[1]*y+point_1c[2]*z-value_1
+		  , point_2c[0]*x+point_2c[1]*y+point_2c[2]*z-value_2)
+
+def arc_splitpoint_cont(opinion_a, opinion_b, param):
+	## Input: two spherical coordinates with unit length and a ratio parameter.
+	## Output: The returned point of this function splits the arc 
+	##         between the two given points with the ratio of (param):(1-param)
+	if param > 1.0 or param < 0.0:
+		return ValueError
+	args = [angle_between(opinion_a, opinion_b), param, opinion_a, opinion_b]
+	cart_solution = fsolve(equations, (0, 0, 0), args)
+	if (cart_solution[0]**2 + cart_solution[1]**2 + cart_solution[2]**2) < 0.001:
+		cart_solution = spherical2cartesian(opinion_a)
+	return cartesian2spherical(cart_solution)
 
 def arc_splitpoint(opinion_a, opinion_b, param):
 	## Input: two spherical coordinates with unit length and a ratio parameter.
-	## Learning function for organizational simulations.
+	## Output: The returned point of this function splits the arc 
+	##         between the two given points with the ratio of (param/8):(1-param/8)
 	if param == 1: ## 12.5%, 1/8
 		return arc_midpoint(opinion_a, arc_splitpoint(opinion_a, opinion_b, 2))
 	elif param == 2: ## 25%, 2/8
@@ -122,13 +128,6 @@ def arc_splitpoint(opinion_a, opinion_b, param):
 def angle_between(a, b):
 	a = numpy.inner( spherical2cartesian(a), spherical2cartesian(b) )
 	return numpy.arccos(a)
-
-def dissimilarity(opinions, NodeCount):
-	total_dissimil = 0
-	for i in range(0, NodeCount):
-		for j in range(i+1, NodeCount):
-			total_dissimil += angle_between(opinions[i], opinions[j])
-	return (total_dissimil*2) / (NodeCount*(NodeCount-1))
 
 def sphericalPolygon_contains(opinions, NodeCount):
 	## Suppose that target coordinate is (0,0,1)
@@ -168,6 +167,37 @@ def standardize(a):
 	if a[0] > Angle_Upper_Bound:
 		a[0] = Angle_Upper_Bound
 	return a
+
+## 2. Fitness and dissimilarity calculators --------------------------------------------------
+def normal_performance(opinion, market = [0,0]): 
+	# Assume market := [0, 0]
+	angle = None
+	if market == [0,0]:
+		angle = opinion[0]
+	else:
+		angle = angle_between(opinion, market)
+	return 10 + math.sqrt(40/3)*erfinv( math.cos(angle) )
+
+def upperDomeNormal_performance(opinion, alpha): 
+	# Assume market := [0, 0]
+	angle = opinion[0]
+	if angle > numpy.arccos(2*alpha-1):
+		return Min_Performance
+	return 10 + math.sqrt(40/3)*erfinv( (math.cos(angle)-alpha)/(1-alpha) )
+
+def lowerDomeNormal_performance(opinion, alpha): 
+	# Assume market := [0, 0]
+	angle = opinion[0]
+	if angle < numpy.arccos(2*alpha-1):
+		return Max_Performance		
+	return 10 + math.sqrt(40/3)*erfinv( (math.cos(angle)-alpha+1)/(alpha) )
+
+def dissimilarity(opinions, NodeCount):
+	total_dissimil = 0
+	for i in range(0, NodeCount):
+		for j in range(i+1, NodeCount):
+			total_dissimil += angle_between(opinions[i], opinions[j])
+	return (total_dissimil*2) / (NodeCount*(NodeCount-1))
 ## -------------------------------------------------------------------------------------------
 
 
@@ -202,7 +232,8 @@ def opinion_init(number_of_nodes, polar_upper = Angle_Upper_Bound \
 	return result
 
 def simulator(NodeCount, SearchRange, LearningRate, BehaviorParameter, \
-			polar_upper_str = None, polar_lower_str = None, bridgeFlag = False):
+			polar_upper_str = None, polar_lower_str = None, bridgeFlag = False, \
+			randomLearnFlag = False):
 			#polar_upper = Angle_Upper_Bound, \
 			#polar_lower = Angle_Lower_Bound): # azimuth_upper_ratio = None, azimuth_lower_ratio = 0):
 
@@ -226,9 +257,14 @@ def simulator(NodeCount, SearchRange, LearningRate, BehaviorParameter, \
 	initial_contains_log = []
 	convergence_log = []
 	elapsed_time_log = []
+	learningRate_log = []
 
 	# [START] Simulations --------------------------------------------------------------------
 	for instance in range(0, Instance_Count):
+		if randomLearnFlag == True:
+			LearningRate = numpy.random.uniform(0, 1) ## Ignore input learning rate.
+		learningRate_log.append(LearningRate)
+		print instance
 		## initialize market coordinate
 		market = [0.0, 0.0]
 
@@ -276,7 +312,10 @@ def simulator(NodeCount, SearchRange, LearningRate, BehaviorParameter, \
 						best_value = current_performance[j]
 						best_index = j
 				if i != best_index:
-					new_opinion[i] = arc_splitpoint(opinion[i], opinion[best_index], LearningRate)
+					if randomLearnFlag == False:
+						new_opinion[i] = arc_splitpoint(opinion[i], opinion[best_index], LearningRate)
+					if randomLearnFlag == True:
+						new_opinion[i] = arc_splitpoint_cont(opinion[i], opinion[best_index], LearningRate)						
 				else:
 					new_opinion[i] = opinion[i]
 				# Step 2-2. Add randomness (Perturbation).	
@@ -305,7 +344,7 @@ def simulator(NodeCount, SearchRange, LearningRate, BehaviorParameter, \
 
 		org_performance = sum(current_performance)/((Max_Performance-Min_Performance)*NodeCount)
 		##print "Convergence = ", org_performance, ",   Elapsed Time = ", time, ",   InitDiss = ", initial_dissimil
-		print ",c(", org_performance, ", ", initial_dissimil, ")"
+		##print ",c(", org_performance, ", ", initial_dissimil, ")"
 		convergence_log.append(org_performance)
 		elapsed_time_log.append(time)
 	# [END] Simulations ----------------------------------------------------------------------
@@ -315,6 +354,8 @@ def simulator(NodeCount, SearchRange, LearningRate, BehaviorParameter, \
 	output['elapsedTime'] = elapsed_time_log
 	output['dissimilarity'] = initial_dissimil_log
 	output['contains'] = initial_contains_log
+	output['learningRate'] = learningRate_log
+
 	return output
 	##return [sum(convergence_log)/len(convergence_log), sum(elapsed_time_log)/(1.0*len(elapsed_time_log))]
 ## -------------------------------------------------------------------------------------------
